@@ -1,0 +1,7 @@
+# 运行期数据：webview2 缓存、日志、截图、录像（约 406M）
+data/
+
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
