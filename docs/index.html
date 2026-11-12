@@ -291,7 +291,7 @@
   var elList = document.getElementById('rel-list');
   var elZip = document.getElementById('dl-zip');
   var elCopy = document.getElementById('dl-copy');
-  var dlXhr = null, dlLabel = '', metaBackup = '';
+  var dlCtl = null, dlLabel = '', metaBackup = '';
 
   // 本地预览用的示例数据（线上不会用到）
   var DEMO = {
@@ -376,9 +376,9 @@
       ' 请稍后刷新页面重试。</div>';
   }
 
-  // ---- 下载：XHR 拉成 Blob 再落盘 ------------------------------------------
+  // ---- 下载：先选保存位置，再流式写盘 --------------------------------------
   // 不用 <a href="xxx.exe"> 直接导航：没下完会留一个白页，被拦也毫无提示。
-  // 自己拉数据就能显示进度、能取消，失败还能说清原因。
+  // 点按钮先弹保存框，位置定了才开始传输，进度、取消、失败原因都能显示。
   function fmtSpeed(bps) {
     if (!bps || bps < 1) return '';
     return bps >= 1048576 ? (bps / 1048576).toFixed(1) + ' MB/s'
@@ -394,16 +394,104 @@
     setTimeout(function () { URL.revokeObjectURL(u); a.remove(); }, 5000);
   }
   function restoreDl() {
-    dlXhr = null;
+    dlCtl = null;
     elMain.textContent = dlLabel || '下载';
     elMeta.innerHTML = metaBackup;
   }
+  // 入口：先让用户选保存位置，选定了才开始下载。
+  // Chrome/Edge 走 showSaveFilePicker + 流式写盘（先选后下，中途取消不留文件）；
+  // 不支持选择器的浏览器退回「拉成 Blob 再存」。
   function beginDownload(url, name) {
-    if (dlXhr) { dlXhr.abort(); return; }          // 下载中再点一次 = 取消
-    var xhr = new XMLHttpRequest();
-    var t0 = Date.now();
-    dlXhr = xhr;
+    if (dlCtl) { dlCtl.cancel(); return; }          // 下载中再点一次 = 取消
     metaBackup = elMeta.innerHTML;
+    var t0 = Date.now();
+
+    if (window.showSaveFilePicker) {
+      var picking = null;
+      try { picking = window.showSaveFilePicker({ suggestedName: name }); }
+      catch (e) { picking = null; }
+
+      if (picking && picking.then) {
+        elMain.textContent = '选择保存位置…';
+        elMeta.textContent = '在弹出的窗口里选好位置，就开始下载';
+        picking.then(function (handle) {
+          streamTo(handle, url, name, t0);
+        }).catch(function (err) {
+          if (err && err.name === 'AbortError') { restoreDl(); return; }  // 用户点了取消
+          blobDownload(url, name, t0);          // 选择器不可用 → 退回内存下载
+        });
+        return;
+      }
+    }
+    blobDownload(url, name, t0);
+  }
+
+  // 流式写盘：读一块写一块，进度实时刷，取消时把半成品丢掉。
+  function streamTo(handle, url, name, t0) {
+    var cancelled = false;
+    var ctrl = new AbortController();
+    var writable = null;
+    dlCtl = { cancel: function () { cancelled = true; ctrl.abort(); } };
+
+    elMain.textContent = '下载中 0%';
+    elMeta.textContent = '正在连接…';
+
+    handle.createWritable().then(function (w) {
+      writable = w;
+      return fetch(url, { signal: ctrl.signal, cache: 'no-store' });
+    }).then(function (resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      var total = parseInt(resp.headers.get('content-length') || '0', 10) || 0;
+      var reader = resp.body.getReader();
+      var loaded = 0;
+
+      function pump() {
+        return reader.read().then(function (r) {
+          if (r.done) return writable.close();
+          return writable.write(r.value).then(function () {
+            loaded += r.value.length;
+            var sec = Math.max(0.3, (Date.now() - t0) / 1000);
+            if (total) {
+              elMain.textContent = '下载中 ' +
+                Math.min(99, Math.round(loaded / total * 100)) + '%';
+              elMeta.textContent = (loaded / 1048576).toFixed(1) + ' / ' +
+                (total / 1048576).toFixed(1) + ' MB · ' + fmtSpeed(loaded / sec) +
+                ' · 再点一次取消';
+            } else {
+              elMain.textContent = '下载中';
+              elMeta.textContent = (loaded / 1048576).toFixed(1) + ' MB · ' +
+                fmtSpeed(loaded / sec) + ' · 再点一次取消';
+            }
+            return pump();
+          });
+        });
+      }
+      return pump();
+    }).then(function () {
+      dlCtl = null;
+      elMain.textContent = '已保存';
+      elMeta.textContent = name + ' 已保存到你选择的位置';
+      setTimeout(restoreDl, 3600);
+    }).catch(function (err) {
+      dlCtl = null;
+      if (writable) { try { writable.abort(); } catch (e) {} }
+      if (cancelled || (err && err.name === 'AbortError')) {
+        elMain.textContent = '已取消';
+        setTimeout(restoreDl, 1200);
+        return;
+      }
+      elMain.textContent = '下载失败';
+      elMeta.textContent = '写入失败或网络中断，可点下面「复制下载链接」重试';
+      setTimeout(restoreDl, 5000);
+    });
+  }
+
+  // 降级：老浏览器没有选择器，只能整个拉进内存再存。
+  function blobDownload(url, name, t0) {
+    var xhr = new XMLHttpRequest();
+    var cancelled = false;
+    dlCtl = { cancel: function () { cancelled = true; xhr.abort(); } };
+
     elMain.textContent = '下载中 0%';
     elMeta.textContent = '正在连接…';
     xhr.open('GET', url, true);
@@ -418,27 +506,27 @@
         ' · 再点一次取消';
     };
     xhr.onload = function () {
+      dlCtl = null;
       if (xhr.status >= 200 && xhr.status < 300) {
         saveBlob(xhr.response, name);
         elMain.textContent = '已开始保存';
         elMeta.textContent = name + ' 下载完成，看看浏览器的下载目录';
-        dlXhr = null;
         setTimeout(restoreDl, 3600);
       } else {
-        dlXhr = null;
         elMain.textContent = '下载失败 ' + xhr.status;
         elMeta.textContent = '点下面「复制下载链接」，粘到浏览器地址栏直接打开';
         setTimeout(restoreDl, 5000);
       }
     };
     xhr.onerror = function () {
-      dlXhr = null;
+      dlCtl = null;
+      if (cancelled) return;
       elMain.textContent = '下载失败';
       elMeta.textContent = '网络中断了，点下面「复制下载链接」，或开代理再试';
       setTimeout(restoreDl, 5000);
     };
     xhr.onabort = function () {
-      dlXhr = null;
+      dlCtl = null;
       elMain.textContent = '已取消';
       setTimeout(restoreDl, 1200);
     };
