@@ -493,7 +493,7 @@
     dlCtl = { cancel: function () { cancelled = true; xhr.abort(); } };
 
     elMain.textContent = '下载中 0%';
-    elMeta.textContent = '正在连接…';
+    elMeta.textContent = '当前浏览器不支持选保存位置，改走普通下载…';
     xhr.open('GET', url, true);
     xhr.responseType = 'blob';
     xhr.onprogress = function (e) {
@@ -509,8 +509,8 @@
       dlCtl = null;
       if (xhr.status >= 200 && xhr.status < 300) {
         saveBlob(xhr.response, name);
-        elMain.textContent = '已开始保存';
-        elMeta.textContent = name + ' 下载完成，看看浏览器的下载目录';
+        elMain.textContent = '已交给浏览器';
+        elMeta.textContent = name + ' 已下载，去浏览器的下载记录里找；没找到就用下面的压缩包版';
         setTimeout(restoreDl, 3600);
       } else {
         elMain.textContent = '下载失败 ' + xhr.status;
