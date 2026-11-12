@@ -10,8 +10,8 @@
     docs/君圣截图-vX.Y.Z.exe         最新版安装包（供下载按钮）
 
   出包时 deploy_js.py 会自动把新 exe 复制进 docs/、重写 versions.json，
-  推上去即生效，不用改页面。外部域名（api.github.com / raw.githubusercontent.com）
-  在部分网络下直连不通，所以页面刻意不碰它们。
+  推上去即生效，不用改页面。外部域名在部分网络下直连不通，
+  所以页面刻意不碰它们，全部走同域相对路径。
 
   本地打开（file:// 或 localhost）会自动显示示例数据方便看版式，
   加 ?live=1 可强制读线上清单。
