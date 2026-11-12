@@ -291,6 +291,7 @@
   var elList = document.getElementById('rel-list');
   var elZip = document.getElementById('dl-zip');
   var elCopy = document.getElementById('dl-copy');
+  var dlXhr = null, dlLabel = '', metaBackup = '';
 
   // 本地预览用的示例数据（线上不会用到）
   var DEMO = {
@@ -341,6 +342,7 @@
     if (!latest.name) { fail('暂时没有可用的版本信息。'); return; }
     elMain.textContent = '下载 ' + latest.tag;
     elMain.href = latest.url;
+    dlLabel = '下载 ' + latest.tag;
     if (elZip) elZip.href = './' + latest.name.replace(/\.exe$/i, '.zip');
 
     var bits = [latest.tag];
@@ -372,6 +374,96 @@
     elMeta.textContent = '版本信息读取失败，可直接点上方按钮下载。';
     elList.innerHTML = '<div class="rel-empty">' + esc(msg || '版本信息暂时不可用。') +
       ' 请稍后刷新页面重试。</div>';
+  }
+
+  // ---- 下载：XHR 拉成 Blob 再落盘 ------------------------------------------
+  // 不用 <a href="xxx.exe"> 直接导航：没下完会留一个白页，被拦也毫无提示。
+  // 自己拉数据就能显示进度、能取消，失败还能说清原因。
+  function fmtSpeed(bps) {
+    if (!bps || bps < 1) return '';
+    return bps >= 1048576 ? (bps / 1048576).toFixed(1) + ' MB/s'
+                          : Math.round(bps / 1024) + ' KB/s';
+  }
+  function saveBlob(blob, name) {
+    var u = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = u;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(u); a.remove(); }, 5000);
+  }
+  function restoreDl() {
+    dlXhr = null;
+    elMain.textContent = dlLabel || '下载';
+    elMeta.innerHTML = metaBackup;
+  }
+  function beginDownload(url, name) {
+    if (dlXhr) { dlXhr.abort(); return; }          // 下载中再点一次 = 取消
+    var xhr = new XMLHttpRequest();
+    var t0 = Date.now();
+    dlXhr = xhr;
+    metaBackup = elMeta.innerHTML;
+    elMain.textContent = '下载中 0%';
+    elMeta.textContent = '正在连接…';
+    xhr.open('GET', url, true);
+    xhr.responseType = 'blob';
+    xhr.onprogress = function (e) {
+      if (!e.lengthComputable) return;
+      var pct = Math.min(99, Math.round(e.loaded / e.total * 100));
+      var sec = Math.max(0.3, (Date.now() - t0) / 1000);
+      elMain.textContent = '下载中 ' + pct + '%';
+      elMeta.textContent = (e.loaded / 1048576).toFixed(1) + ' / ' +
+        (e.total / 1048576).toFixed(1) + ' MB · ' + fmtSpeed(e.loaded / sec) +
+        ' · 再点一次取消';
+    };
+    xhr.onload = function () {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        saveBlob(xhr.response, name);
+        elMain.textContent = '已开始保存';
+        elMeta.textContent = name + ' 下载完成，看看浏览器的下载目录';
+        dlXhr = null;
+        setTimeout(restoreDl, 3600);
+      } else {
+        dlXhr = null;
+        elMain.textContent = '下载失败 ' + xhr.status;
+        elMeta.textContent = '点下面「复制下载链接」，粘到浏览器地址栏直接打开';
+        setTimeout(restoreDl, 5000);
+      }
+    };
+    xhr.onerror = function () {
+      dlXhr = null;
+      elMain.textContent = '下载失败';
+      elMeta.textContent = '网络中断了，点下面「复制下载链接」，或开代理再试';
+      setTimeout(restoreDl, 5000);
+    };
+    xhr.onabort = function () {
+      dlXhr = null;
+      elMain.textContent = '已取消';
+      setTimeout(restoreDl, 1200);
+    };
+    xhr.send();
+  }
+  function bindDownload(el, ext) {
+    if (!el) return;
+    el.addEventListener('click', function (e) {
+      var href = el.getAttribute('href') || '';
+      if (href === '#' || !new RegExp('\\.' + ext + '$', 'i').test(href)) return;
+      e.preventDefault();
+      beginDownload(href, decodeURIComponent(href.split('/').pop()));
+    });
+  }
+  bindDownload(elMain, 'exe');
+  bindDownload(elZip, 'zip');
+  if (elList) {
+    elList.addEventListener('click', function (e) {
+      var a = e.target && e.target.closest ? e.target.closest('a.dl') : null;
+      if (!a) return;
+      var href = a.getAttribute('href') || '';
+      if (!/\.exe$/i.test(href)) return;
+      e.preventDefault();
+      beginDownload(href, decodeURIComponent(href.split('/').pop()));
+    });
   }
 
   // 有些内嵌浏览器/预览面板没有下载处理器：点链接既不提示也不发请求。
