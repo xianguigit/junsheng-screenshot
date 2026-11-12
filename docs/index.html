@@ -82,6 +82,9 @@
   .btn-secondary:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
   .btn:disabled { opacity: .6; cursor: default; }
   .meta { margin-top: 18px; font-size: 13px; color: var(--muted); min-height: 22px; }
+  .alt-dl { margin-top: 4px; font-size: 12px; color: #93a1b3; }
+  .alt-dl a { color: #93a1b3; text-decoration: underline; text-underline-offset: 2px; }
+  .alt-dl a:hover { color: var(--accent); }
   .meta span + span::before { content: "·"; margin: 0 9px; color: var(--border-strong); }
   .preview-note { color: var(--accent); }
   .shot { width: 100%; height: auto; display: block; border: 1px solid var(--border);
@@ -161,10 +164,11 @@
       <h1>截图，快一点。<br>也轻一点。</h1>
       <p class="lead">区域截图与标注、桌面贴图、屏幕录制与 GIF 导出。无需安装，下载即用，不驻留多余后台。</p>
       <div class="cta-row">
-        <a id="dl-main" class="btn btn-primary" href="./君圣截图-v0.1.4.exe" download="君圣截图-v0.1.4.exe">下载 v0.1.4</a>
+        <a id="dl-main" class="btn btn-primary" href="./君圣截图-v0.1.4.exe">下载 v0.1.4</a>
         <a id="dl-alt" class="btn btn-secondary" href="#releases">查看历史版本</a>
       </div>
       <div id="meta" class="meta">正在获取最新版本…</div>
+      <div class="alt-dl">点下载没反应？试 <a id="dl-zip" href="./君圣截图-v0.1.4.zip">压缩包版</a>，或 <a id="dl-copy" href="#">复制下载链接</a></div>
     </div>
     <svg class="shot" viewBox="0 0 480 300" role="img" aria-label="君圣截图框选界面示意">
       <rect width="480" height="300" rx="11" fill="#f2f6fb"/>
@@ -285,6 +289,8 @@
   var elMain = document.getElementById('dl-main');
   var elMeta = document.getElementById('meta');
   var elList = document.getElementById('rel-list');
+  var elZip = document.getElementById('dl-zip');
+  var elCopy = document.getElementById('dl-copy');
 
   // 本地预览用的示例数据（线上不会用到）
   var DEMO = {
@@ -335,7 +341,7 @@
     if (!latest.name) { fail('暂时没有可用的版本信息。'); return; }
     elMain.textContent = '下载 ' + latest.tag;
     elMain.href = latest.url;
-    elMain.setAttribute('download', latest.name);
+    if (elZip) elZip.href = './' + latest.name.replace(/\.exe$/i, '.zip');
 
     var bits = [latest.tag];
     if (latest.size) bits.push(fmtSize(latest.size));
@@ -366,6 +372,26 @@
     elMeta.textContent = '版本信息读取失败，可直接点上方按钮下载。';
     elList.innerHTML = '<div class="rel-empty">' + esc(msg || '版本信息暂时不可用。') +
       ' 请稍后刷新页面重试。</div>';
+  }
+
+  // 有些内嵌浏览器/预览面板没有下载处理器：点链接既不提示也不发请求。
+  // 留一个「复制链接」出口，粘到系统浏览器里就能下。
+  if (elCopy) {
+    elCopy.addEventListener('click', function (e) {
+      e.preventDefault();
+      var href = elMain.getAttribute('href') || '';
+      var url = /^https?:/i.test(href) ? href : new URL(href, location.href).href;
+      var back = function (txt) {
+        elCopy.textContent = txt || '复制下载链接';
+        setTimeout(function () { elCopy.textContent = '复制下载链接'; }, 1800);
+      };
+      var fallback = function () { window.prompt('复制这个地址，在浏览器里打开：', url); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function () { back('已复制'); }, fallback);
+      } else {
+        fallback();
+      }
+    });
   }
 
   if (demo) { render(DEMO, '本地预览数据'); return; }
