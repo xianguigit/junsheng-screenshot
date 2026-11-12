@@ -161,7 +161,7 @@
       <h1>截图，快一点。<br>也轻一点。</h1>
       <p class="lead">区域截图与标注、桌面贴图、屏幕录制与 GIF 导出。无需安装，下载即用，不驻留多余后台。</p>
       <div class="cta-row">
-        <a id="dl-main" class="btn btn-primary" href="#" data-state="loading">获取中…</a>
+        <a id="dl-main" class="btn btn-primary" href="./君圣截图-v0.1.4.exe" download="君圣截图-v0.1.4.exe">下载 v0.1.4</a>
         <a id="dl-alt" class="btn btn-secondary" href="#releases">查看历史版本</a>
       </div>
       <div id="meta" class="meta">正在获取最新版本…</div>
@@ -326,7 +326,7 @@
       name: name,
       size: (rec && rec.size) || 0,
       date: (rec && rec.date) || '',
-      url: name ? './' + encodeURIComponent(name) : ''
+      url: name ? './' + name : ''
     };
   }
 
@@ -360,23 +360,29 @@
   }
 
   function fail(msg) {
-    elMain.textContent = '暂不可用';
-    elMain.href = '#';
-    elMain.removeAttribute('download');
-    elMeta.textContent = '暂时无法获取版本信息，请稍后刷新重试。';
+    // 兜底：按钮上已经由部署脚本写死本次版本的安装包，清单读不到也照样能下载。
+    var href = elMain.getAttribute('href') || '#';
+    if (href === '#') elMain.textContent = '暂不可用';
+    elMeta.textContent = '版本信息读取失败，可直接点上方按钮下载。';
     elList.innerHTML = '<div class="rel-empty">' + esc(msg || '版本信息暂时不可用。') +
       ' 请稍后刷新页面重试。</div>';
   }
 
   if (demo) { render(DEMO, '本地预览数据'); return; }
 
-  fetch(MANIFEST, { cache: 'no-store' })
+  // 清单只用来补大小/日期/历史列表，走同域，4 秒没回来就不等了。
+  var timer = null;
+  var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+  function done() { if (timer) { clearTimeout(timer); timer = null; } }
+  if (ctrl) timer = setTimeout(function () { ctrl.abort(); }, 4000);
+
+  fetch(MANIFEST, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
     .then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     })
-    .then(function (d) { render(d); })
-    .catch(function () { fail('版本信息读取失败。'); });
+    .then(function (d) { done(); render(d); })
+    .catch(function () { done(); fail('版本信息读取失败。'); });
 })();
 </script>
 </body>
