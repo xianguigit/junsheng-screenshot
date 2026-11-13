@@ -1,0 +1,13 @@
+{
+  "updated": "2026-11-13",
+  "extensions": [
+    {
+      "id": "ppocr-v4",
+      "name": "PaddleOCR v4 中文增强",
+      "version": "1.0.1",
+      "desc": "宽图按块识别，4K 屏小字更稳；常规选区约 1.4 秒",
+      "size": 19195804,
+      "file": "ppocr-v4-1.0.1.zip"
+    }
+  ]
+}
