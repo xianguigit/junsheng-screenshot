@@ -164,11 +164,11 @@
       <h1>截图，快一点。<br>也轻一点。</h1>
       <p class="lead">区域截图与标注、桌面贴图、屏幕录制与 GIF 导出。无需安装，下载即用，不驻留多余后台。</p>
       <div class="cta-row">
-        <a id="dl-main" class="btn btn-primary" href="./君圣截图-v0.1.9.exe">下载 v0.1.9</a>
+        <a id="dl-main" class="btn btn-primary" href="./君圣截图-v0.1.10.exe">下载 v0.1.10</a>
         <a id="dl-alt" class="btn btn-secondary" href="#releases">查看历史版本</a>
       </div>
       <div id="meta" class="meta">正在获取最新版本…</div>
-      <div class="alt-dl">下载交给浏览器，进度在浏览器下载列表里；网慢可用 <a id="dl-zip" href="./君圣截图-v0.1.9.zip">压缩包版</a>，或 <a id="dl-copy" href="#">复制下载链接</a></div>
+      <div class="alt-dl">下载交给浏览器，进度在浏览器下载列表里；网慢可用 <a id="dl-mirror" href="https://ghfast.top/https://raw.githubusercontent.com/xianguigit/junsheng-screenshot/main/docs/%E5%90%9B%E5%9C%A3%E6%88%AA%E5%9B%BE-v0.1.10.exe">国内加速</a>、<a id="dl-zip" href="./君圣截图-v0.1.10.zip">压缩包版</a>，或 <a id="dl-copy" href="#">复制下载链接</a></div>
     </div>
     <svg class="shot" viewBox="0 0 480 300" role="img" aria-label="君圣截图框选界面示意">
       <rect width="480" height="300" rx="11" fill="#f2f6fb"/>
@@ -282,6 +282,14 @@
   // 不走任何外部接口：外部域名在不同网络下可能连不上，会让下载按钮变成死链。
   var MANIFEST = 'versions.json';
 
+  // 国内加速：同域下载慢时套一层公开 GitHub 代理（前缀 + 原始地址）。
+  // 只在用户主动点「国内加速」时使用，主按钮永远走本站。
+  var MIRROR = 'https://ghfast.top/';
+  var RAW_BASE = 'https://raw.githubusercontent.com/xianguigit/junsheng-screenshot/main/docs/';
+  function mirrorOf(name) {
+    return name ? MIRROR + RAW_BASE + encodeURIComponent(name) : '';
+  }
+
   var isLocal = location.protocol === 'file:' ||
                 /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   var demo = isLocal && !/[?&]live=1/.test(location.search);
@@ -290,11 +298,12 @@
   var elMeta = document.getElementById('meta');
   var elList = document.getElementById('rel-list');
   var elZip = document.getElementById('dl-zip');
+  var elMirror = document.getElementById('dl-mirror');
   var elCopy = document.getElementById('dl-copy');
 
   // 本地预览用的示例数据（线上不会用到）
   var DEMO = {
-    latest: { tag: 'v0.1.9', name: '君圣截图-v0.1.9.exe', size: 10360832, date: '2026-11-13' },
+    latest: { tag: 'v0.1.10', name: '君圣截图-v0.1.10.exe', size: 10363392, date: '2026-11-13' },
     history: [
       { tag: 'v0.1.3', size: 9826304, date: '2026-11-12' },
       { tag: 'v0.1.2', size: 9825792, date: '2026-11-11' },
@@ -342,6 +351,9 @@
     elMain.textContent = '下载 ' + latest.tag;
     elMain.href = latest.url;
     if (elZip) elZip.href = './' + latest.name.replace(/\.exe$/i, '.zip');
+    if (elMirror) {
+      elMirror.href = mirrorOf(latest.name);
+    }
 
     var bits = [latest.tag];
     if (latest.size) bits.push(fmtSize(latest.size));
