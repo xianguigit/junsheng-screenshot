@@ -192,7 +192,7 @@
       <h1>截图，快一点。<br>也轻一点。</h1>
       <p class="lead">区域截图与标注、桌面贴图、屏幕录制与 GIF 导出。无需安装，下载即用，不驻留多余后台。</p>
       <div class="cta-row">
-        <a id="dl-main" class="btn btn-primary" href="./君圣截图-v0.1.17.exe">下载轻量版 v0.1.17</a>
+        <a id="dl-main" class="btn btn-primary" href="./君圣截图-v0.1.18.exe">下载轻量版 v0.1.18</a>
         <a id="dl-alt" class="btn btn-secondary" href="#editions">两个版本对比</a>
       </div>
       <div id="meta" class="meta">正在获取最新版本…</div>
@@ -255,8 +255,8 @@
           <li>文字识别用 <strong>Windows 系统自带 OCR</strong></li>
           <li>零额外体积，下载即用</li>
         </ul>
-        <a id="dl-edition-light" class="btn btn-secondary edition-btn" href="./君圣截图-v0.1.17.exe">下载轻量版</a>
-        <div class="edition-alt"><a id="dl-zip" href="./君圣截图-v0.1.17.zip">压缩包</a> · <a id="dl-mirror" href="https://ghfast.top/https://raw.githubusercontent.com/xianguigit/junsheng-screenshot/main/docs/%E5%90%9B%E5%9C%A3%E6%88%AA%E5%9B%BE-v0.1.17.exe">国内加速</a> · <a id="dl-copy" href="#">复制下载链接</a></div>
+        <a id="dl-edition-light" class="btn btn-secondary edition-btn" href="./君圣截图-v0.1.18.exe">下载轻量版</a>
+        <div class="edition-alt"><a id="dl-zip" href="./君圣截图-v0.1.18.zip">压缩包</a> · <a id="dl-mirror" href="https://ghfast.top/https://raw.githubusercontent.com/xianguigit/junsheng-screenshot/main/docs/%E5%90%9B%E5%9C%A3%E6%88%AA%E5%9B%BE-v0.1.18.exe">国内加速</a> · <a id="dl-copy" href="#">复制下载链接</a></div>
       </div>
       <div class="edition edition-pro">
         <div class="edition-head">
@@ -271,8 +271,8 @@
           <li><strong>内置增强中文识别</strong>，小字、低对比更准</li>
           <li>开箱即用，不用另外下载扩展</li>
         </ul>
-        <a id="dl-edition-pro" class="btn btn-primary edition-btn" href="./君圣截图Pro-v0.1.17.exe">下载 Pro 版</a>
-        <div class="edition-alt"><a id="dl-pro-zip" href="./君圣截图Pro-v0.1.17.zip">压缩包</a> · <a id="dl-pro-mirror" href="https://ghfast.top/https://raw.githubusercontent.com/xianguigit/junsheng-screenshot/main/docs/%E5%90%9B%E5%9C%A3%E6%88%AA%E5%9B%BEPro-v0.1.17.exe">国内加速</a></div>
+        <a id="dl-edition-pro" class="btn btn-primary edition-btn" href="./君圣截图Pro-v0.1.18.exe">下载 Pro 版</a>
+        <div class="edition-alt"><a id="dl-pro-zip" href="./君圣截图Pro-v0.1.18.zip">压缩包</a> · <a id="dl-pro-mirror" href="https://ghfast.top/https://raw.githubusercontent.com/xianguigit/junsheng-screenshot/main/docs/%E5%90%9B%E5%9C%A3%E6%88%AA%E5%9B%BEPro-v0.1.18.exe">国内加速</a> · <a id="dl-pro-copy" href="#">复制下载链接</a></div>
       </div>
     </div>
   </section>
@@ -369,14 +369,15 @@
   var elEdLight = document.getElementById('dl-edition-light');
   var elEdPro = document.getElementById('dl-edition-pro');
   var elProZip = document.getElementById('dl-pro-zip');
+  var elProCopy = document.getElementById('dl-pro-copy');
   var elProMirror = document.getElementById('dl-pro-mirror');
   var elSizeLight = document.getElementById('pro-size-light');
   var elSizeDark = document.getElementById('pro-size-dark');
 
   // 本地预览用的示例数据（线上不会用到）
   var DEMO = {
-    latest: { tag: 'v0.1.17', name: '君圣截图-v0.1.17.exe', size: 10403840, date: '2026-11-16' },
-    pro: { name: '君圣截图Pro-v0.1.17.exe', size: 29604352 },
+    latest: { tag: 'v0.1.18', name: '君圣截图-v0.1.18.exe', size: 10404864, date: '2026-11-17' },
+    pro: { name: '君圣截图Pro-v0.1.18.exe', size: 29606400 },
     history: [
       { tag: 'v0.1.3', size: 9826304, date: '2026-11-12' },
       { tag: 'v0.1.2', size: 9825792, date: '2026-11-11' },
@@ -475,15 +476,16 @@
 
 
   // 有些内嵌浏览器/预览面板没有下载处理器：点链接既不提示也不发请求。
-  // 留一个「复制链接」出口，粘到系统浏览器里就能下。
-  if (elCopy) {
-    elCopy.addEventListener('click', function (e) {
+  // 留一个「复制链接」出口，粘到系统浏览器里就能下。轻量版 / Pro 版各绑一个。
+  function bindCopy(link, source) {
+    if (!link || !source) return;
+    link.addEventListener('click', function (e) {
       e.preventDefault();
-      var href = elMain.getAttribute('href') || '';
+      var href = source.getAttribute('href') || '';
       var url = /^https?:/i.test(href) ? href : new URL(href, location.href).href;
       var back = function (txt) {
-        elCopy.textContent = txt || '复制下载链接';
-        setTimeout(function () { elCopy.textContent = '复制下载链接'; }, 1800);
+        link.textContent = txt || '复制下载链接';
+        setTimeout(function () { link.textContent = '复制下载链接'; }, 1800);
       };
       var fallback = function () { window.prompt('复制这个地址，在浏览器里打开：', url); };
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -493,6 +495,8 @@
       }
     });
   }
+  bindCopy(elCopy, elMain);
+  bindCopy(elProCopy, elEdPro);
 
   if (demo) { render(DEMO, '本地预览数据'); return; }
 
