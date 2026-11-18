@@ -1,3 +1,3 @@
 @echo off
 set JSHENG_DEBUG=1
-start "" "%~dp0О§ЪЅНиЭМ-v0.1.22.exe"
+start "" "%~dp0О§ЪЅНиЭМ-v0.1.23.exe"
